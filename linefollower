@@ -1,0 +1,227 @@
+#include <QTRSensors.h>
+#define RIGHT_MOTOR_PIN1 4       
+#define RIGHT_MOTOR_PIN2 5
+#define RIGHT_MOTOR_PWM 3
+#define LEFT_MOTOR_PIN1  8      
+#define LEFT_MOTOR_PIN2  7
+#define LEFT_MOTOR_PWM 9
+#define redLed 12
+#define greenLed 13
+#define BUTON 2
+#define stndby 6
+#define KD 0.2
+#define KP 0.01
+#define maxSpeed 100
+#define leftBasedSpeed 50
+constexpr int rightBasedSpeed  = 50;
+static uint16_t lastError = 0;
+int error;
+int correctionError;
+int leftSpeed;
+int rightSpeed;
+uint16_t  position;
+int derivation;
+int blackCounter=0;
+int blackCounter1=0;
+int blackCounter2=0;
+int target=3500;
+int check=1;
+QTRSensors qtr;
+const uint8_t SensorCount = 8;
+unsigned int  sensorValues[SensorCount];
+void setup(){
+modes();
+digitalWrite(redLed,HIGH);
+delay(500);
+qtr.setTypeAnalog();
+qtr.setEmitterPin(11);
+qtr.setSensorPins((const uint8_t[]){A0, A1, A2,A3,A4,A5,A6,A7}, SensorCount);
+calibration();
+digitalWrite(stndby,1);
+}
+void loop() {
+  position =qtr.readLineBlack(sensorValues);
+  /*if(sensorValues[0]>500 && sensorValues[7]>500){
+  position =qtr.readLineWhite(sensorValues);
+  }
+  /* if(sensorStatus(1,1,1,1,1,1,1,1) && check==1){
+    ledOn(1,1);
+          if(blackCounter==1 && blackCounter1==1 && blackCounter2==1){
+            check=0;;
+}
+      else if(blackCounter==1 && blackCounter1==1 && blackCounter2==0){
+    turnRight();delay(70);
+    blackCounter2++;check=0;
+}
+   else if( blackCounter==1 &&  blackCounter1==0){
+        turnRight();delay(70);blackCounter1++;check=0;
+
+   }
+      else if(blackCounter==0){
+       
+   blackCounter++;check=0;
+} }
+  /*else if(sensorStatus(1,1,1,0,0,1,1,1) || sensorStatus(1,1,0,0,1,1,1,1) || sensorStatus(1,1,1,1,0,0,1,1)){
+  position =qtr.readLineWhite(sensorValues);
+  }
+    if(sensorStatus(1,1,1,0,0,0,0,0)||sensorStatus(1,1,1,1,0,0,0,0) || sensorStatus(1,1,1,1,1,0,0,0) ){
+    turnRight();
+      }/*
+  }else if(sensorValues[2]>500 && sensorValues[3]>500 && sensorValues[4]>500 && sensorValues[5]>500 && sensorValues[6]<500 && sensorValues[7]<500){
+turnRight();
+  }else if(sensorValues[1]>500 && sensorValues[3]>500 && sensorValues[2]>500 && sensorValues[6]<500 && sensorValues[7]<500){
+turnRight();
+  }  if(sensorValues[0]>500 && sensorValues[1]>500 && sensorValues[7]<500&&sensorValues[6]<500){
+turnRight();}
+   if(sensorValues[0]<500 && sensorValues[1]<500  &&sensorValues[2]<500 && sensorValues[5]>500 && sensorValues[7]>500&&sensorValues[6]>500){
+
+  } 
+  if(sensorValues[0]>500 && sensorValues[1]>500 && sensorValues[7]>500&&sensorValues[6]>500){
+  position =qtr.readLineWhite(sensorValues);
+}*/
+if(blackCounter==0 && sensorValues[0]>500 &&sensorValues[1]>500 &&sensorValues[2]>500 &&sensorValues[5]>500 &&sensorValues[6]>500 &&sensorValues[7]>500){
+blackCounter=1;delay(50);
+}
+  else if(blackCounter==1 && sensorValues[0]>500 &&sensorValues[1]>500 &&sensorValues[2]>500 &&sensorValues[5]>500 &&sensorValues[6]>500 &&sensorValues[7]>500){
+turnRight();blackCounter=-1;blackCounter1=1;
+  }else if(blackCounter1==1 && sensorValues[0]>500 &&sensorValues[1]>500 &&sensorValues[2]>500 &&blackCounter1==1&&sensorValues[5]>500 &&sensorValues[6]>500 &&sensorValues[7]>500){
+turnRight();
+  }
+  else if(sensorValues[0]>500 && sensorValues[1]>500  && sensorValues[2]>500 && sensorValues[7]<500 && sensorValues[6]<500 &&sensorValues[5]<500  ){
+turnRight();
+  }
+   else if(sensorValues[0]<500 && sensorValues[1]<500  && sensorValues[2]<500 && sensorValues[7]>500 && sensorValues[6]>500 &&sensorValues[5]>500  ){
+turnLeft();
+  }
+   else if(sensorValues[4]>500 && sensorValues[3]>500  &&sensorValues[2]>500 && sensorValues[0]<500  &&sensorValues[7]<500){
+turnRight();
+  } 
+ else if(sensorValues[0]<500 && sensorValues[7]<500  &&sensorValues[3]>500 && sensorValues[4]>500 && sensorValues[5]>500){
+turnRight();
+  }  else if(sensorValues[0]<500 && sensorValues[7]<500  &&sensorValues[2]>500 && sensorValues[4]>500 && sensorValues[3]>500){
+turnRight();
+  } 
+   /*if(sensorStatus(1,1,1,1,0,0,0,0) || sensorStatus(1,1,1,1,1,0,0,0) ||      sensorStatus(1,1,1,1,1,1,0,0) || sensorStatus(1,1,1,0,0,0,0,0))
+   {
+ turnRight(); 
+   }
+   
+   /*else if(sensorStatus(0,0,0,0,1,1,1,1) || sensorStatus(0,0,0,1,1,1,1,1) ){
+          turnLeft();
+          }*/
+   pidControl();
+   ledOn(0,1);
+  }
+/*void state(){
+   if(sensorStatus(1,1,1,1,1,1,1,1)){
+    ledOn(1,1);
+          if(blackCounter==1 && blackCounter1==1 && blackCounter2==1){
+//motorControl(rightBasedSpeed,leftBasedSpeed);
+delay(250);
+}
+      if(blackCounter==1 && blackCounter1==1 && blackCounter2==0){
+    turnRight();blackCounter2++;
+}
+   if( blackCounter==1 &&  blackCounter1==0){
+        turnRight();blackCounter1++;
+
+   }
+      if(blackCounter==0){
+   blackCounter++;   delay(250);
+//motorControl(rightBasedSpeed,leftBasedSpeed);
+}
+  }
+  if(sensorStatus(0,0,0,0,0,0,0,0)){
+    while(sensorStatus(0,0,0,0,0,0,0,0)){
+motorControl(rightBasedSpeed,leftBasedSpeed);}}  
+      if(sensorStatus(1,1,1,1,0,0,0,0) || sensorStatus(1,1,1,1,1,0,0,0) ||      sensorStatus(1,1,1,1,1,1,0,0) ||sensorStatus(0,0,0,1,1,1,0,0) || sensorStatus(0,0,1,1,1,0,0,0) || sensorStatus(0,0,1,1,1,1,0,0) || sensorStatus(0,1,1,1,1,1,1,0) || sensorStatus(0,1,1,1,1,1,0,0) || sensorStatus(0,0,1,1,1,1,1,0)){
+          turnRight();
+  }
+  if(sensorStatus(0,0,0,0,1,1,1,1) || sensorStatus(0,0,0,1,1,1,1,1)){
+          turnLeft();
+  }  
+    if(sensorStatus(1,1,1,0,0,1,1,1) || sensorStatus(1,1,0,0,1,1,1,1) || sensorStatus(1,1,1,1,0,0,1,1)){
+   
+          while(sensorStatus(1,1,1,0,0,1,1,1) || sensorStatus(1,1,0,0,1,1,1,1) || sensorStatus(1,1,1,1,0,0,1,1) || sensorStatus(1,1,1,1,1,0,0,1)|| sensorStatus(1,0,0,1,1,1,1,1) || sensorStatus(0,0,1,1,1,1,1,1) || sensorStatus(1,1,1,1,1,1,0,0)){
+            position =qtr.readLineWhite(sensorValues);
+            ledOn(0,1);
+            pidControl();
+          }
+  }
+}*/
+bool sensorStatus(int a1,int a2,int a3,int a4,int a5,int a6,int a7,int a8){
+if(!((a1==0 && sensorValues[0]<500) || (a1==1 && sensorValues[0]>500))){return false;}
+if(!((a2==0 && sensorValues[1]<500) || (a2==1 && sensorValues[1]>500))){return false;}
+if(!((a3==0 && sensorValues[2]<500) || (a3==1 && sensorValues[2]>500))){return false;}
+if(!((a4==0 && sensorValues[3]<500) || (a4==1 && sensorValues[3]>500))){return false;}
+if(!((a5==0 && sensorValues[4]<500) || (a5==1 && sensorValues[4]>500))){return false;}
+if(!((a6==0 && sensorValues[5]<500) || (a6==1 && sensorValues[5]>500))){return false;}
+if(!((a7==0 && sensorValues[6]<500) || (a7==1 && sensorValues[6]>500))){return false;}
+if(!((a8==0 && sensorValues[7]<500) || (a8==1 && sensorValues[7]>500))){return false;}
+return true;
+}
+void pidControl(){
+error = position - target;
+derivation=error-lastError;
+lastError = error;
+correctionError = KP * error + KD * derivation;
+if(correctionError<0){
+  leftSpeed=leftBasedSpeed+(correctionError*-1);
+motorControl(rightBasedSpeed-(correctionError*-1),leftSpeed);
+}else{
+  rightSpeed=rightBasedSpeed+correctionError;
+  motorControl(rightSpeed,leftBasedSpeed-correctionError);
+}}void modes(){
+  pinMode(LEFT_MOTOR_PIN1, OUTPUT);
+  pinMode(LEFT_MOTOR_PIN2, OUTPUT);  
+  pinMode(RIGHT_MOTOR_PIN1, OUTPUT);
+  pinMode(RIGHT_MOTOR_PIN2, OUTPUT);
+  pinMode(LEFT_MOTOR_PWM,OUTPUT);
+  pinMode(RIGHT_MOTOR_PWM,OUTPUT);
+  pinMode(redLed,OUTPUT);
+  pinMode(greenLed,OUTPUT);
+  pinMode(BUTON,INPUT);}
+void turnRight(){
+  digitalWrite(LEFT_MOTOR_PIN1, HIGH);
+  digitalWrite(LEFT_MOTOR_PIN2, LOW);
+  digitalWrite(RIGHT_MOTOR_PIN1, LOW);
+  digitalWrite(RIGHT_MOTOR_PIN2, HIGH);
+   analogWrite(LEFT_MOTOR_PWM,100);
+  analogWrite(RIGHT_MOTOR_PWM,100);delay(30);
+  }
+void turnLeft(){
+digitalWrite(LEFT_MOTOR_PIN1, LOW);
+digitalWrite(LEFT_MOTOR_PIN2, HIGH);
+digitalWrite(RIGHT_MOTOR_PIN1, HIGH);
+digitalWrite(RIGHT_MOTOR_PIN2, LOW);
+analogWrite(LEFT_MOTOR_PWM,100);
+analogWrite(RIGHT_MOTOR_PWM,100);delay(30);
+}
+void calibration(){
+  for (uint16_t i = 0; i < 200; i++)
+  {  ledOn(i%2,i%3);
+    qtr.calibrate();
+  }ledOn(1,1);
+  wait(1000);
+}
+void ledOn(int red,int green){
+digitalWrite(redLed,red);
+digitalWrite(greenLed,green);
+}
+void motorControl(int speedRight,int speedLeft){
+if (speedRight > maxSpeed ) speedRight = maxSpeed;
+if (speedLeft > maxSpeed ) speedLeft = maxSpeed;
+if (speedRight < 0) speedRight = 0; 
+if (speedLeft < 0) speedLeft = 0; 
+  analogWrite(LEFT_MOTOR_PWM,speedLeft);
+  analogWrite(RIGHT_MOTOR_PWM,speedRight);
+  digitalWrite(LEFT_MOTOR_PIN1, HIGH);
+  digitalWrite(RIGHT_MOTOR_PIN1, HIGH);
+  digitalWrite(LEFT_MOTOR_PIN2, LOW);
+  digitalWrite(RIGHT_MOTOR_PIN2, LOW);
+}
+void wait(int time) {
+digitalWrite(stndby,0);
+  delay(time);
+  digitalWrite(stndby,1);
+}
